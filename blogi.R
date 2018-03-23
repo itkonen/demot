@@ -61,9 +61,10 @@ data %>%
   labs(title = "Työllisyysaste ja työttömyysaste sukupuolittain, 15-74-vuotiaat",
        y = "%", caption = "Lähde: Tilastokeskus.")
 
-
+## Katsotaan mitä ikäluokkia datassa on ja valitaan niistä osa
 data %>% distinct(Ikäluokka)
 valitutIkäluokat <- c("15-24", "25-34", "35-44", "45-54", "55-64")
+
 data %>%
   filter(Tiedot == "Työttömyysaste" &
            Ikäluokka %in% valitutIkäluokat &
