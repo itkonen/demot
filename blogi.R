@@ -40,16 +40,18 @@ data <-
   drop_na(values)
 data
 
+## Piirretään kuva, joka antaa yleissilmäyksen taulukon määrätiedoista
 data %>%
   filter(Yksikkö == "1000 henkeä" &
-           Sukupuoli == "Sukupuolet yhteensä" &
-           Ikäluokka == "15-74") %>%
+         Sukupuoli == "Sukupuolet yhteensä" &
+         Ikäluokka == "15-74") %>%
   ggplot(aes(x = Päivämäärä, y = values, color = Tiedot)) +
   geom_line() +
   labs(title = "Työvoimatutkimuksen määrätiedot, 15-74-vuotiaat",
        y = "1000 henkeä", caption = "Lähde: Tilastokeskus.")
 
-
+## Kuvataan vielä taulukon prosenttimääräiset tunnusluvut
+## eli työllisyys- ja työttömyysasteet
 data %>%
   filter(Yksikkö == "%" &
            Sukupuoli %in% c("Miehet", "Naiset") &
@@ -58,6 +60,7 @@ data %>%
   geom_line() +
   labs(title = "Työllisyysaste ja työttömyysaste sukupuolittain, 15-74-vuotiaat",
        y = "%", caption = "Lähde: Tilastokeskus.")
+
 
 data %>% distinct(Ikäluokka)
 valitutIkäluokat <- c("15-24", "25-34", "35-44", "45-54", "55-64")
