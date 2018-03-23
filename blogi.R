@@ -64,7 +64,7 @@ data %>%
 ## Katsotaan mitä ikäluokkia datassa on ja valitaan niistä osa
 data %>% distinct(Ikäluokka)
 valitutIkäluokat <- c("15-24", "25-34", "35-44", "45-54", "55-64")
-
+## Piirretään työttömyysasteet ikäluokittain erillisiin paneeleihin
 data %>%
   filter(Tiedot == "Työttömyysaste" &
            Ikäluokka %in% valitutIkäluokat &
