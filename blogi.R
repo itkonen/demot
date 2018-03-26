@@ -1,3 +1,4 @@
+                                        # -*- coding: iso-8859-15 -*-
 ##install.packages(c("tidyverse", "lubridate", "zoo", "treemapify", "pxweb"))
 library(tidyverse)
 library(lubridate)
@@ -5,94 +6,195 @@ library(zoo)
 library(treemapify)
 library(pxweb)
 
-## pxweb-paketin avulla voi ottaa yhteyttÃ¤ myÃ¶s lukuisiin muihin rajapintoihin.
-## Seuraavilla komennoilla voit pÃ¤ivittÃ¤Ã¤ rajapintojen katalogin ja selata
-## eri tietolÃ¤hteitÃ¤.
-update_pxweb_apis()
-interactive_pxweb()
+library(httr)
+Sys.setenv(http_proxy = "proxy.bofnet.fi:8383")
+Sys.setenv(https_proxy = "proxy.bofnet.fi:8383")
+set_config(config(ssl_verifypeer = 0L))
 
-## Haetaan TyÃ¶voimatutkimus-tilaston ensimmÃ¤inen taulukko Tilastokeskuksen
-## rajapinnasta. Samaista taulukkoa voi tarkastella myÃ¶s nettiselaimella
+## pxweb-paketin avulla voi ottaa yhteyttä myös lukuisiin muihin rajapintoihin.
+## Seuraavilla komennoilla voit päivittää rajapintojen katalogin ja selata
+## eri tietolähteitä.
+## update_pxweb_apis()
+## interactive_pxweb()
+
+## Haetaan Työvoimatutkimus-tilaston ensimmäinen taulukko Tilastokeskuksen
+## rajapinnasta. Samaista taulukkoa voi tarkastella myös nettiselaimella
 ## osoitteessa http://pxnet2.stat.fi/PXWeb/pxweb/fi/StatFin/StatFin__tym__tyti/statfin_tyti_pxt_001.px/
 rawdata <-
-  get_pxweb_data("http://pxnet2.stat.fi/PXWeb/api/v1/fi/StatFin/tym/tyti/statfin_tyti_pxt_001.px",
-                 list(Vuosi = c('*'),
-                      "Kuukausi-, vuosineljÃ¤nnes- ja vuosikeskiarvo" =
-                        c('01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'),
-                      Sukupuoli = c('*'),
-                      IkÃ¤luokka = c('*'),
-                      Tiedot = c('*')),
-                 clean = TRUE) %>% as_tibble
+    get_pxweb_data("http://pxnet2.stat.fi/PXWeb/api/v1/fi/StatFin/tym/tyti/statfin_tyti_pxt_001.px",
+                   list(Vuosi = c('*'),
+                        "Kuukausi-, vuosineljännes- ja vuosikeskiarvo" =
+                            c('01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'),
+                        Sukupuoli = c('*'),
+                        Ikäluokka = c('*'),
+                        Tiedot = c('*')),
+                   clean = TRUE) %>% as_tibble
 rawdata
 
-## SiistitÃ¤Ã¤n raakadata muotoon, jossa sitÃ¤ on helpompi analysoida.
+## Siistitään raakadata muotoon, jossa sitä on helpompi analysoida.
 data <-
-  rawdata %>%
-  ## Muutetaan ajankohtaa mÃ¤Ã¤rittÃ¤vÃ¤t sarakkeet date-muotoon
-  mutate(PÃ¤ivÃ¤mÃ¤Ã¤rÃ¤ = ymd(str_c(Vuosi, `Kuukausi-; vuosineljÃ¤nnes- ja vuosikeskiarvo`, 
-                                15, sep = "-"))) %>%
-  select(-Vuosi, -`Kuukausi-; vuosineljÃ¤nnes- ja vuosikeskiarvo`) %>%
-  ## Erotellaan Tiedot-sarakkeesta muuttujan nimi ja mittayksikkÃ¶
-  ## omiin sarakkeisiinsa
-  mutate(YksikkÃ¶ = str_split_fixed(Tiedot, ", ", n = 2)[,2]) %>%
-  mutate(Tiedot = str_split_fixed(Tiedot, ", ", n = 2)[,1]) %>%
-  ## Poistetaan rivit, joista puuttuu havaintoarvo
-  drop_na(values)
+    rawdata %>%
+    ## Muutetaan ajankohtaa määrittävät sarakkeet date-muotoon
+    mutate(Päivämäärä = ymd(str_c(Vuosi, `Kuukausi-; vuosineljännes- ja vuosikeskiarvo`, 1, sep = "-"))) %>%
+    select(-Vuosi, -`Kuukausi-; vuosineljännes- ja vuosikeskiarvo`) %>%
+    ## Erotellaan Tiedot-sarakkeesta muuttujan nimi ja mittayksikkö
+    ## omiin sarakkeisiinsa
+    mutate(Yksikkö = str_split_fixed(Tiedot, ", ", n = 2)[,2]) %>%
+    mutate(Tiedot = str_split_fixed(Tiedot, ", ", n = 2)[,1]) %>%
+    ## Poistetaan rivit, joista puuttuu havaintoarvo
+    drop_na(values)
 data
 
-## PiirretÃ¤Ã¤n kuva, joka antaa yleissilmÃ¤yksen taulukon mÃ¤Ã¤rÃ¤tiedoista
+## Piirretään tilaston määrätiedoista yksinkertainen kuva, joka antaa
+## yleiskäsityksen datasta.
 data %>%
-  filter(YksikkÃ¶ == "1000 henkeÃ¤" &
-         Sukupuoli == "Sukupuolet yhteensÃ¤" &
-         IkÃ¤luokka == "15-74") %>%
-  ggplot(aes(x = PÃ¤ivÃ¤mÃ¤Ã¤rÃ¤, y = values, color = Tiedot)) +
-  geom_line() +
-  labs(title = "TyÃ¶voimatutkimuksen mÃ¤Ã¤rÃ¤tiedot, 15-74-vuotiaat",
-       y = "1000 henkeÃ¤", caption = "LÃ¤hde: Tilastokeskus.")
+    filter(Yksikkö == "1000 henkeä" &
+           Sukupuoli == "Sukupuolet yhteensä" &
+           Ikäluokka == "15-74") %>%
+    ggplot(aes(x = Päivämäärä, y = values, color = Tiedot)) +
+    geom_line() +
+    labs(title = "Työvoimatutkimuksen määrätiedot",
+         subtitle = "Sukupuolet yhteensä, 15-74-vuotiaat",
+         y = "1000 henkeä", caption = "Lähde: Tilastokeskus.")
+ggsave("yleiskuva.png")
 
-## Kuvataan vielÃ¤ taulukon prosenttimÃ¤Ã¤rÃ¤iset tunnusluvut
-## eli tyÃ¶llisyys- ja tyÃ¶ttÃ¶myysasteet
+## Kuvasta havaitaa, että tiedoissa on merkittävää kausivaihtelua. Piirretään
+## seuraavaksi kuvasarja tiedoista ikäluokittain. Joista havaitaan, että
+## kausivaihtelu liittyy erityisesti nuorten työmarkkina-asemaan.
+data %>% distinct(Ikäluokka)
+valitutIkäluokat <- c("15-24", "25-34", "35-44", "45-54", "55-64")
+valitutTiedot <- c("Työlliset", "Työttömät", "Työvoiman ulkopuolella olevat")
 data %>%
-  filter(YksikkÃ¶ == "%" &
-           Sukupuoli %in% c("Miehet", "Naiset") &
-           IkÃ¤luokka == "15-74") %>%
-  ggplot(aes(x = PÃ¤ivÃ¤mÃ¤Ã¤rÃ¤, y = values, color = Sukupuoli, linetype = Tiedot)) +
-  geom_line() +
-  labs(title = "TyÃ¶llisyysaste ja tyÃ¶ttÃ¶myysaste sukupuolittain, 15-74-vuotiaat",
-       y = "%", caption = "LÃ¤hde: Tilastokeskus.")
+    filter(Tiedot %in% valitutTiedot&
+           Ikäluokka %in% valitutIkäluokat &
+           Sukupuoli == "Sukupuolet yhteensä") %>%
+    ggplot(aes(x = Päivämäärä, y = values, color = Tiedot)) +
+    geom_line() +
+    facet_wrap(~Ikäluokka) +        
+    labs(title = "Työttömyysaste ikäluokittain",
+         y = "%", caption = "Lähde: Tilastokeskus.")
 
-## Katsotaan mitÃ¤ ikÃ¤luokkia datassa on ja valitaan niistÃ¤ osa
-data %>% distinct(IkÃ¤luokka)
-valitutIkÃ¤luokat <- c("15-24", "25-34", "35-44", "45-54", "55-64")
-## PiirretÃ¤Ã¤n tyÃ¶ttÃ¶myysasteet ikÃ¤luokittain erillisiin paneeleihin
-data %>%
-  filter(Tiedot == "TyÃ¶ttÃ¶myysaste" &
-           IkÃ¤luokka %in% valitutIkÃ¤luokat &
-           Sukupuoli == "Sukupuolet yhteensÃ¤") %>%
-  ggplot(aes(x = PÃ¤ivÃ¤mÃ¤Ã¤rÃ¤, y = values)) +
-  geom_line() +
-  facet_wrap(~IkÃ¤luokka) +        
-  labs(title = "TyÃ¶ttÃ¶myysaste ikÃ¤luokittain",
-       y = "%", caption = "LÃ¤hde: Tilastokeskus.")
-
+## Lasketaan seuraavaksi kuukausihavainnoille 12 kuukauden liukuvat keskiarvot,
+## joihin kausivaihtelu ei vaikuta, ja tallennetaan tiedot uuteen taulukkoon.
 data2 <- 
-  data %>%
-  filter(Tiedot == "TyÃ¶ttÃ¶mÃ¤t" &
-           IkÃ¤luokka %in% valitutIkÃ¤luokat &
-           Sukupuoli == "Sukupuolet yhteensÃ¤") %>%
-  group_by(IkÃ¤luokka) %>%
-  mutate("Liukuva keskiarvo, 12 kk" =
-           rollmean(values, 12, na.pad = T, align = "right")) %>%
-  ungroup %>%
-  rename("Kuukausihavainto" = "values") %>%
-  gather("Kuukausihavainto", "Liukuva keskiarvo, 12 kk",
-         key = "Muuttuja", value = "values") %>%
-  drop_na(values)
+    data %>%
+    group_by(Tiedot, Sukupuoli, Ikäluokka) %>%
+    mutate("Liukuva keskiarvo, 12 kk" =
+               rollmean(values, 12, fill = NA, align = "right")) %>%
+    ungroup %>%
+    rename("Kuukausihavainto" = "values") %>%
+    gather("Kuukausihavainto", "Liukuva keskiarvo, 12 kk",
+           key = "Muuttuja", value = "values") %>%
+    drop_na(values)
+data2
 
+## Piirretään aiempi kuva käyttäen liukuvia vuosikeskiarvoja,
+## jolloin havaintaan paremmin kehityksen trendit.
 data2 %>%
-  ggplot(aes(x = PÃ¤ivÃ¤mÃ¤Ã¤rÃ¤, y = values, color = Muuttuja)) +
-  geom_line() +
-  facet_wrap(~IkÃ¤luokka) +        
-  labs(title = "TyÃ¶ttÃ¶myysaste ikÃ¤luokittain",
-       y = "%", caption = "LÃ¤hde: Tilastokeskus.")
+    filter(Tiedot %in% valitutTiedot &
+           Ikäluokka %in% valitutIkäluokat &
+           Sukupuoli == "Sukupuolet yhteensä" &
+           Muuttuja == "Liukuva keskiarvo, 12 kk") %>% 
+    ggplot(aes(x = Päivämäärä, y = values, color = Tiedot)) +
+    geom_line() +
+    facet_wrap(~Ikäluokka) +        
+    labs(title = "Työmarkkina-asema ikäluokittain",
+         subtitle = "Liukuva keskiarvo, 12 kk",
+         y = "1000 henkeä", caption = "Lähde: Tilastokeskus.")
+
+## Samat tiedot voidaan vielä esittää ns. pinottuina aluekuvina,
+## jolloin havaitaan paremmin ikäluokkien koon ja työmarkkina-asemien
+## jakauman kehitys.
+data2 %>%
+    filter(Tiedot %in% valitutTiedot &
+           Ikäluokka %in% valitutIkäluokat &
+           Sukupuoli == "Sukupuolet yhteensä" &
+           Muuttuja == "Liukuva keskiarvo, 12 kk") %>% 
+    ggplot(aes(x = Päivämäärä, y = values, fill = Tiedot)) +
+    geom_area(alpha = 0.7, color = "lightgray") +
+    facet_wrap(~Ikäluokka) +
+    theme(legend.position = c(0.85, 0.3)) +
+    labs(title = "Työmarkkina-asema ikäluokittain",
+         subtitle = "Liukuva keskiarvo, 12 kk",
+         y = "1000 henkeä", caption = "Lähde: Tilastokeskus.")
+ggsave("ikäluokittain.png")
+
+## Piirretään seuraavaksi kuva työttömien kokonaismäärän kehitystä eriteltynä 
+## ikäluokittain.
+data2 %>%
+    filter(Tiedot == "Työttömät" &
+           Ikäluokka %in% valitutIkäluokat &
+           Sukupuoli == "Sukupuolet yhteensä" &
+           Muuttuja == "Liukuva keskiarvo, 12 kk") %>%
+    ggplot(aes(x = Päivämäärä, y = values, fill = Ikäluokka)) +
+    geom_area(alpha = 0.75, color = "lightgray") +
+    scale_x_date(date_breaks = "2 years", date_label = "%Y") +
+    labs(title = "Työttömien määrä ikäluokittain",
+         y = "1000 henkeä", caption = "Lähde: Tilastokeskus.")
+ggsave("työttömätIkäluokittain.png")
+
+
+## Tarkastellaan vielä viimeisimmän vuosikeskiarvon työmarkkina-asemiaen
+## jakaumaa ikäluokittain.
+viimeisinHavainto <- max(data2$Päivämäärä)
+data2 %>%
+    filter(Päivämäärä == viimeisinHavainto &
+           Tiedot %in% valitutTiedot &
+           Ikäluokka %in% valitutIkäluokat &
+           Sukupuoli == "Sukupuolet yhteensä" &
+           Muuttuja == "Liukuva keskiarvo, 12 kk") %>%
+    ggplot(aes(x = Ikäluokka, y = values, fill = Tiedot)) +
+    geom_col(color = "black", alpha = 0.6) +
+    labs(title = "Työmarkkina-asema ikäluokittain",
+         subtitle = paste("Keskiarvo,",
+                          format(viimeisinHavainto - months(11), "%B %Y"), "-",
+                          format(viimeisinHavainto, "%B %Y")),
+         y = "1000 henkeä", caption = "Lähde: Tilastokeskus.")
+
+## Työmarkkina-asemien ja ikäluokkien kehitystä voidaan havainnolistaa myös
+## animaation avulla. Käytetään animaatiossa ns. puukarttakuvio, joka kuvaa
+## luontevalla tavalla eri väestöryhmien suhteellisia osuuksia. Kuviossa
+## väestöryhmät esitetään tasoon ryhmiteltyinä laatikoina, joiden koko vastaa
+## väestöryhmän kokoa.
+## Valitaan ensin animaatioon tarvittava osajoukko aineistosta.
+data_animaatio <- 
+    data2 %>%
+    filter(Tiedot %in% valitutTiedot &
+           Ikäluokka %in% valitutIkäluokat &
+           Sukupuoli == "Sukupuolet yhteensä" &
+           Muuttuja == "Liukuva keskiarvo, 12 kk") %>%
+    mutate(Ikäluokka = as.character(Ikäluokka)) 
+dates <- distinct(data_animaatio, Päivämäärä) %>% pluck("Päivämäärä")
+dir.create("animaatio")
+
+## Luodaan funktio, joka piirää ja tallentaa kuvan valitulle ajankohdalle.
+plot_frame <- function(i) {
+    print(i)
+    filter(data_animaatio, Päivämäärä == dates[i]) %>%
+        ggplot(aes(area = values,
+                   fill = Tiedot,
+                   subgroup = Ikäluokka, 
+                   label = round(1000*values))) +
+        geom_treemap(fixed = T) +
+        geom_treemap_text(colour = "white", fontface = "bold",
+                          place = "bottomright", fixed = T) +
+        geom_treemap_subgroup_border(colour = "black", fixed = T) +
+        geom_treemap_subgroup_text(colour = "black", 
+                                   place = "centre", fixed = T) +
+        theme(legend.position = "top",
+              plot.title = element_text(size=18)) +
+        labs(title = paste("Työmarkkina-asema ikäluokittain, 12 kk liukuva keskiarvo,",
+                           format(dates[i], "%Y-%m")),
+             caption = "Lähde: Tilastokeskus.") +
+    ggsave(paste0("animaatio/työmarkkinat", sprintf("%04d", i), ".png"),
+           scale = 1.3, dpi = 150, width = 6, height=5)
+}
+
+## Piirretään kuva jokaiselle aineston päivämäärälle.
+for(i in seq_along(dates))
+    plot_frame(i)
+
+## Lopuksi yhdistetän
+system("ffmpeg -f image2 -framerate 12 -i animaatio/työmarkkinat%04d.png animaatio.gif")
+
 
