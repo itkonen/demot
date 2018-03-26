@@ -1,4 +1,6 @@
                                         # -*- coding: iso-8859-15 -*-
+## Laskelmat edellyttävät seuraavassa lueteltuja R-paketteja. Mikäli niitä ei
+## vielä ole koneellasi, voit asentaa ne install.packages -komennolla.
 ##install.packages(c("tidyverse", "lubridate", "zoo", "treemapify", "pxweb"))
 library(tidyverse)
 library(lubridate)
@@ -6,29 +8,21 @@ library(zoo)
 library(treemapify)
 library(pxweb)
 
-library(httr)
-Sys.setenv(http_proxy = "proxy.bofnet.fi:8383")
-Sys.setenv(https_proxy = "proxy.bofnet.fi:8383")
-set_config(config(ssl_verifypeer = 0L))
-
-## pxweb-paketin avulla voi ottaa yhteyttä myös lukuisiin muihin rajapintoihin.
-## Seuraavilla komennoilla voit päivittää rajapintojen katalogin ja selata
-## eri tietolähteitä.
-## update_pxweb_apis()
-## interactive_pxweb()
 
 ## Haetaan Työvoimatutkimus-tilaston ensimmäinen taulukko Tilastokeskuksen
 ## rajapinnasta. Samaista taulukkoa voi tarkastella myös nettiselaimella
 ## osoitteessa http://pxnet2.stat.fi/PXWeb/pxweb/fi/StatFin/StatFin__tym__tyti/statfin_tyti_pxt_001.px/
 rawdata <-
-    get_pxweb_data("http://pxnet2.stat.fi/PXWeb/api/v1/fi/StatFin/tym/tyti/statfin_tyti_pxt_001.px",
-                   list(Vuosi = c('*'),
-                        "Kuukausi-, vuosineljännes- ja vuosikeskiarvo" =
-                            c('01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'),
-                        Sukupuoli = c('*'),
-                        Ikäluokka = c('*'),
-                        Tiedot = c('*')),
-                   clean = TRUE) %>% as_tibble
+    get_pxweb_data(
+        "http://pxnet2.stat.fi/PXWeb/api/v1/fi/StatFin/tym/tyti/statfin_tyti_pxt_001.px",
+        list(Vuosi = c('*'),
+             "Kuukausi-, vuosineljännes- ja vuosikeskiarvo" =
+                 c('01', '02', '03', '04', '05', '06',
+                   '07', '08', '09', '10', '11', '12'),
+             Sukupuoli = c('*'),
+             Ikäluokka = c('*'),
+             Tiedot = c('*')),
+        clean = TRUE) %>% as_tibble
 rawdata
 
 ## Siistitään raakadata muotoon, jossa sitä on helpompi analysoida.
@@ -45,6 +39,7 @@ data <-
     drop_na(values)
 data
 
+
 ## Piirretään tilaston määrätiedoista yksinkertainen kuva, joka antaa
 ## yleiskäsityksen datasta.
 data %>%
@@ -57,6 +52,7 @@ data %>%
          subtitle = "Sukupuolet yhteensä, 15-74-vuotiaat",
          y = "1000 henkeä", caption = "Lähde: Tilastokeskus.")
 ggsave("yleiskuva.png")
+
 
 ## Kuvasta havaitaa, että tiedoissa on merkittävää kausivaihtelua. Piirretään
 ## seuraavaksi kuvasarja tiedoista ikäluokittain. Joista havaitaan, että
@@ -74,6 +70,7 @@ data %>%
     labs(title = "Työttömyysaste ikäluokittain",
          y = "%", caption = "Lähde: Tilastokeskus.")
 
+
 ## Lasketaan seuraavaksi kuukausihavainnoille 12 kuukauden liukuvat keskiarvot,
 ## joihin kausivaihtelu ei vaikuta, ja tallennetaan tiedot uuteen taulukkoon.
 data2 <- 
@@ -88,6 +85,7 @@ data2 <-
     drop_na(values)
 data2
 
+
 ## Piirretään aiempi kuva käyttäen liukuvia vuosikeskiarvoja,
 ## jolloin havaintaan paremmin kehityksen trendit.
 data2 %>%
@@ -101,6 +99,7 @@ data2 %>%
     labs(title = "Työmarkkina-asema ikäluokittain",
          subtitle = "Liukuva keskiarvo, 12 kk",
          y = "1000 henkeä", caption = "Lähde: Tilastokeskus.")
+
 
 ## Samat tiedot voidaan vielä esittää ns. pinottuina aluekuvina,
 ## jolloin havaitaan paremmin ikäluokkien koon ja työmarkkina-asemien
@@ -118,6 +117,7 @@ data2 %>%
          subtitle = "Liukuva keskiarvo, 12 kk",
          y = "1000 henkeä", caption = "Lähde: Tilastokeskus.")
 ggsave("ikäluokittain.png")
+
 
 ## Piirretään seuraavaksi kuva työttömien kokonaismäärän kehitystä eriteltynä 
 ## ikäluokittain.
@@ -151,6 +151,7 @@ data2 %>%
                           format(viimeisinHavainto, "%B %Y")),
          y = "1000 henkeä", caption = "Lähde: Tilastokeskus.")
 
+
 ## Työmarkkina-asemien ja ikäluokkien kehitystä voidaan havainnolistaa myös
 ## animaation avulla. Käytetään animaatiossa ns. puukarttakuvio, joka kuvaa
 ## luontevalla tavalla eri väestöryhmien suhteellisia osuuksia. Kuviossa
@@ -174,7 +175,8 @@ plot_frame <- function(i) {
         ggplot(aes(area = values,
                    fill = Tiedot,
                    subgroup = Ikäluokka, 
-                   label = round(1000*values))) +
+                   label = format(1000*values, digits = 0,
+                                  nsmall = 0, scientific = F))) +
         geom_treemap(fixed = T) +
         geom_treemap_text(colour = "white", fontface = "bold",
                           place = "bottomright", fixed = T) +
@@ -190,11 +192,17 @@ plot_frame <- function(i) {
            scale = 1.3, dpi = 150, width = 6, height=5)
 }
 
-## Piirretään kuva jokaiselle aineston päivämäärälle.
+## Piirretään kuva jokaiselle aineston kuukaudelle.
 for(i in seq_along(dates))
     plot_frame(i)
 
-## Lopuksi yhdistetän
-system("ffmpeg -f image2 -framerate 12 -i animaatio/työmarkkinat%04d.png animaatio.gif")
+## Lopuksi yhdistetän kuvat animaatioksi käyttäen FFmpeg-ohjelmistoa, jonka voi ladata ilmaiseksi osoitteesta http://ffmpeg.org/ . 
+system("ffmpeg -framerate 12 -i animaatio/työmarkkinat%04d.png -c:v libx264 -crf 18 -r 25 animaatio.mp4")
 
+
+## pxweb-paketin avulla voi ottaa yhteyttä myös lukuisiin muihin rajapintoihin.
+## Seuraavilla komennoilla voit päivittää rajapintojen katalogin ja selata
+## eri tietolähteitä.
+update_pxweb_apis()
+interactive_pxweb()
 
