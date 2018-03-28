@@ -111,7 +111,8 @@ kausitasoitus <- function(df){
             gather(key = "Sarjatyyppi", value = "values",
                    "Kausitasoitettu", "Trendi", "Alkuperäinen")
     })
-}    
+}
+
 data2 <- 
     data %>%
     group_by(Tiedot, Sukupuoli, Ikäluokka) %>%
@@ -230,7 +231,7 @@ plot_frame <- function(i) {
                       mutate(prop = as.character(round(ymax - ymin, 3)),
                              x.position = (xmax + xmin) / 2,
                              y.position = (ymax + ymin) / 2) %>%
-                      mutate(label = ifelse(.wt < 10, "",
+                      mutate(label = ifelse(.wt < 5, "",
                                             format(1000*.wt, digits = 0,
                                                    nsmall = 0, scientific = F)))
     g2 <- g + geom_text(
