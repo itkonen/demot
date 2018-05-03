@@ -1,4 +1,7 @@
                                         # -*- coding: iso-8859-15 -*-
+## Versio: 1.0
+## Tekijä: Juha Itkonen @ Suomen Pankki
+
 ## Laskelmat edellyttävät seuraavassa lueteltuja R-paketteja. Mikäli niitä ei
 ## vielä ole koneellasi, voit asentaa ne install.packages -komennolla.
 ##install.packages(c("tidyverse", "lubridate", "seasonal", "ggmosaic", "pxweb"))
@@ -58,6 +61,7 @@ data <-
     drop_na(values)           
 data
 
+
 ## Piirretään tilaston määrätiedoista yksinkertainen kuva, joka antaa
 ## yleiskäsityksen datasta.
 data %>%
@@ -70,7 +74,6 @@ data %>%
          subtitle = "Sukupuolet yhteensä, 15-74-vuotiaat",
          y = "1000 henkeä", caption = "Lähde: Tilastokeskus.")
 ggsave("yleiskuva.png", height = 4)
-
 
 ## Kuvasta havaitaa, että tiedoissa on merkittävää kausivaihtelua. Piirretään
 ## seuraavaksi kuvasarja tiedoista ikäluokittain. Joista havaitaan, että
@@ -113,6 +116,7 @@ kausitasoitus <- function(df){
     })
 }
 
+## Luodaan uusi taulukko, jossa on mukana myös kausitasoitetut ja trendi sarjat.
 data2 <- 
     data %>%
     group_by(Tiedot, Sukupuoli, Ikäluokka) %>%
@@ -167,7 +171,7 @@ data2 %>%
     geom_area(alpha = 0.75, color = "lightgray") +
     scale_x_date(date_breaks = "2 years", date_label = "%Y") +
     labs(title = "Työttömien määrä ikäluokittain",
-         subtitle = "Liukuva keskiarvo, 12 kk",
+         subtitle = "Trendi",
          y = "1000 henkeä",
          caption = "Lähteet: Tilastokeskus ja Suomen Pankin laskelmat.")
 ggsave("työttömätIkäluokittain.png", height = 4)
@@ -192,10 +196,9 @@ data2 %>%
 
 
 ## Työmarkkina-asemien ja ikäluokkien kehitystä voidaan havainnolistaa myös
-## animaation avulla. Käytetään animaatiossa ns. puukarttakuvio, joka kuvaa
-## luontevalla tavalla eri väestöryhmien suhteellisia osuuksia. Kuviossa
-## väestöryhmät esitetään tasoon ryhmiteltyinä laatikoina, joiden koko vastaa
-## väestöryhmän kokoa.
+## animaation avulla. Käytetään animaatiossa ns. mosaiikkikuviota, joka kuvaa
+## eri väestöryhmien suhteellisia osuuksia. Kuviossa väestöryhmät esitetään
+## tasoon ryhmiteltyinä laatikoina, joiden koko vastaa väestöryhmän kokoa.
 ## Valitaan ensin animaatioon tarvittava osajoukko aineistosta.
 data_animaatio <- 
     data2 %>%
@@ -219,7 +222,7 @@ plot_frame <- function(i) {
         geom_mosaic(offset = 0, color = "lightgray") +
         scale_y_continuous(labels = scales::percent) +
         theme(legend.position = "top",
-              plot.title = element_text(size=16)) +
+              plot.title = element_text(size = 16)) +
         guides(fill = guide_legend(title = "")) +
         labs(x = "Ikäluokka", y = "Osuus ikäluokasta",
              title = paste("Työmarkkina-asema ikäluokittain, trendi,",
@@ -239,7 +242,7 @@ plot_frame <- function(i) {
                   y = temp$y.position,
                   label = temp$label) 
     ggsave(paste0("animaatio/työmarkkinat", sprintf("%04d", i), ".png"),
-           plot = g2, scale = 1.3, dpi = 150, width = 6, height=5.1)
+           plot = g2, scale = 1.3, dpi = 150, width = 6, height = 5.1)
 }
 
 ## Piirretään kuva jokaiselle aineston kuukaudelle.
@@ -249,8 +252,8 @@ for(i in seq_along(dates))
 ## Lopuksi yhdistetän kuvat animaatioksi käyttäen FFmpeg-ohjelmistoa, jonka voi ladata ilmaiseksi osoitteesta
 ## http://ffmpeg.org/ . Ubuntu-pohjaisissa Linux-järjestelmissä asennus onnistuu komennolla:
 ## sudo apt install ffmpeg
-## Tämän jälkeen voi ajaa komennon:
-system("ffmpeg -framerate 12 -i animaatio/työmarkkinat%04d.png -vcodec libx264 -pix_fmt yuv420p -r 25 -strict -2 animaatio.mp4")
+## Tämän jälkeen voi ajaa R:ssä komennon:
+## system("ffmpeg -framerate 12 -i animaatio/työmarkkinat%04d.png -vcodec libx264 -pix_fmt yuv420p -r 25 -strict -2 animaatio.mp4")
 
 ## Windows-käyttöjärjestelmään tarkkoitettu versio FFmpeg-ohjelmistosta löytyy täältä:
 ## https://ffmpeg.zeranoe.com/builds/
@@ -265,6 +268,4 @@ system("ffmpeg -framerate 12 -i animaatio/työmarkkinat%04d.png -vcodec libx264 -
 ## eri tietolähteitä.
 update_pxweb_apis()
 interactive_pxweb()
-
-
 
