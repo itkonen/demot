@@ -1,3 +1,6 @@
+## Title: Kakkuanimaatio
+## Author: Juha Itkonen
+## Version: 2018-05-15
 library(tidyverse)
 library(magrittr)
 library(tweenr)
@@ -16,7 +19,6 @@ x <- data %>%
     filter(str_detect(Taloustoimi, "B1GMHT/CAP")) %$%
     values
 x <- x/max(x)
-
 
 dir.create("kakkukuva")
 download.file("https://emojipedia-us.s3.amazonaws.com/thumbs/160/facebook/92/birthday-cake_1f382.png",
@@ -43,7 +45,6 @@ for(j in seq_along(index)) {
 system("ffmpeg -framerate 10 -i kakkukuva/cake%04d.png -vcodec libx264 -pix_fmt yuv420p -r 25 -strict -2 kakku.mp4")
 
 #####################################
-
 
 data2 <- 
   get_pxweb_data(url = "http://pxnet2.stat.fi/PXWeb/api/v1/fi/StatFin/tul/tjt/statfin_tjt_pxt_014.px",
@@ -105,7 +106,6 @@ for(k in seq_along(index)) {
 }
 
 system("ffmpeg -framerate 5 -i kakunjako/cake%04d.png -vcodec libx264 -pix_fmt yuv420p -r 25 -strict -2 -y kakunjako.mp4")
-
 
 system("ffmpeg -y -i kakunjako.mp4 -vf fps=10,scale=320:-1:flags=lanczos,palettegen palette.png")
 
