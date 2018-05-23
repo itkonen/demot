@@ -7,6 +7,10 @@ library(tweenr)
 library(pxweb)
 library(png)
 
+## pxweb-paketti on poistunut CRAN-kirjastosta, mutta sen voi asentaa GitHubista.
+## library(devtools)
+## install_github("rOpenGov/pxweb")
+
 data <- 
   get_pxweb_data(url = "http://pxnet2.stat.fi/PXWeb/api/v1/fi/StatFin/kan/vtp/statfin_vtp_pxt_019.px",
              dims = list(Taloustoimi = c('*'),
